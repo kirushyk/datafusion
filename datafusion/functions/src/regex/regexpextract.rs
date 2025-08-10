@@ -206,4 +206,15 @@ mod tests {
             assert_eq!(result.is_ok(), valid);
         }
     }
+
+    #[test]
+    fn test_regexp_extract_mismatch() {
+        let cases: [(&'static str, &'static str, i64, Option<&'static str>); 1] =
+            [("100-200", r"(\d+)-(\d+)", 0, Some("100-200"))];
+        for (input, pattern, idx, expected) in cases {
+            let result = regexp_extract_with_args(input, pattern, idx);
+            let result = unwrap_columnar_value(result.unwrap());
+            assert_eq!(result, expected.map(|s| s.to_string()));
+        }
+    }
 }
