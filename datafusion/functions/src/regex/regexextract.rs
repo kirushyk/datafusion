@@ -51,7 +51,7 @@ impl ScalarUDFImpl for RegexpExtractFunc {
                 ColumnarValue::Scalar(ScalarValue::Utf8(Some(pattern))),
                 ColumnarValue::Scalar(ScalarValue::Int64(Some(idx))),
             ) => (input.as_str(), pattern.as_str(), *idx),
-            _ => unreachable!(),
+            _ => return Ok(ColumnarValue::Scalar(ScalarValue::Utf8(None))),
         };
 
         let re = regex::Regex::new(pattern)
