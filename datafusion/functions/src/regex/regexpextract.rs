@@ -55,7 +55,7 @@ impl ScalarUDFImpl for RegexpExtractFunc {
         };
 
         let re = regex::Regex::new(pattern)
-            .map_err(|e| DataFusionError::Execution(format!("Invalid regex: {e}")))?;
+            .map_err(|e| DataFusionError::External(Box::new(e)))?;
 
         let result = re
             .captures(input)
@@ -183,5 +183,18 @@ mod tests {
         let result = RegexpExtractFunc::new().invoke_with_args(args);
         let result = unwrap_columnar_value(result.unwrap());
         assert_ne!(result, None);
+    }
+
+    #[test]
+    fn test_regexp_extract_invalid_args() {
+        let cases = [
+            (0, r"(\d+)-(\d+)", true),
+            (0, r"(abc", false),
+            (0, r"[z-a]", false),
+        ];
+        for (idx, regex, valid) in cases {
+            let result = regexp_extract_with_args("100-200", regex, idx);
+            assert_eq!(result.is_ok(), valid);
+        }
     }
 }
