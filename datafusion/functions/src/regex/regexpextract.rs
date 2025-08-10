@@ -97,6 +97,14 @@ mod tests {
         RegexpExtractFunc::new().invoke_with_args(args)
     }
 
+    fn unwrap_columnar_value(result: ColumnarValue) -> Option<String> {
+        if let ColumnarValue::Scalar(ScalarValue::Utf8(ref actual)) = result {
+            actual.clone()
+        } else {
+            unreachable!()
+        }
+    }
+
     #[test]
     fn test_regexp_extract_groups() {
         let cases = [
@@ -106,15 +114,33 @@ mod tests {
             (3, None),
         ];
         for (idx, expected) in cases {
-            let result =
-                regexp_extract_with_args("100-200", r"(\d+)-(\d+)", idx).unwrap();
-            let actual =
-                if let ColumnarValue::Scalar(ScalarValue::Utf8(ref actual)) = result {
-                    actual
-                } else {
-                    panic!()
-                };
-            assert_eq!(actual, &expected.map(|s| s.to_string()));
+            let result = regexp_extract_with_args("100-200", r"(\d+)-(\d+)", idx);
+            let result = unwrap_columnar_value(result.unwrap());
+            assert_eq!(result, expected.map(|s| s.to_string()));
         }
+    }
+
+    #[test]
+    fn test_regexp_extract_null_propagation() {
+        let arg_fields = vec![
+            Field::new("input", DataType::Utf8, true).into(),
+            Field::new("pattern", DataType::Utf8, true).into(),
+            Field::new("idx", DataType::Int64, true).into(),
+        ];
+        let _input = ColumnarValue::Scalar(ScalarValue::Utf8(Some("100-200".into())));
+        let pattern =
+            ColumnarValue::Scalar(ScalarValue::Utf8(Some(r"(\d+)-(\d+)".into())));
+        let idx = ColumnarValue::Scalar(ScalarValue::Int64(Some(1)));
+        let null = ColumnarValue::Scalar(ScalarValue::Null);
+        let return_field = Field::new("f", DataType::Utf8, true).into();
+        let args = ScalarFunctionArgs {
+            args: vec![null, pattern, idx],
+            arg_fields,
+            number_rows: 3,
+            return_field,
+        };
+        let result = RegexpExtractFunc::new().invoke_with_args(args);
+        let result = unwrap_columnar_value(result.unwrap());
+        assert_eq!(result, None);
     }
 }
