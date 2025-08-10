@@ -214,6 +214,7 @@ mod tests {
             ("ac", r"(a)?b(c)?", 2, None),
             ("abc", r"(a)?b(c)?", 1, Some("a")),
             ("abc", r"(a)?b(c)?", 2, Some("c")),
+            ("100-200", r"(\d+)-(\d+)", 3, None),
         ];
         for (input, pattern, idx, expected) in cases {
             let result = regexp_extract_with_args(input, pattern, idx);
