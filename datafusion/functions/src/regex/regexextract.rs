@@ -1,7 +1,8 @@
 use arrow::datatypes::DataType;
 use datafusion_common::{DataFusionError, Result, ScalarValue};
 use datafusion_expr::{
-    ColumnarValue, Documentation, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, Documentation, ScalarFunctionArgs, ScalarUDFImpl, Signature,
+    Volatility,
 };
 use std::any::Any;
 
@@ -42,10 +43,7 @@ impl ScalarUDFImpl for RegexpExtractFunc {
         Ok(DataType::Utf8)
     }
 
-    fn invoke_with_args(
-        &self,
-        args: datafusion_expr::ScalarFunctionArgs,
-    ) -> Result<ColumnarValue> {
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let args = &args.args;
         let (input, pattern, idx) = match (&args[0], &args[1], &args[2]) {
             (
@@ -69,5 +67,54 @@ impl ScalarUDFImpl for RegexpExtractFunc {
 
     fn documentation(&self) -> Option<&Documentation> {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use arrow::datatypes::{DataType, Field};
+
+    fn regexp_extract_with_args(
+        input: &str,
+        pattern: &str,
+        idx: i64,
+    ) -> Result<ColumnarValue> {
+        let args = ScalarFunctionArgs {
+            args: vec![
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(input.to_string()))),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(pattern.to_string()))),
+                ColumnarValue::Scalar(ScalarValue::Int64(Some(idx))),
+            ],
+            arg_fields: vec![
+                Field::new("input", DataType::Utf8, true).into(),
+                Field::new("pattern", DataType::Utf8, true).into(),
+                Field::new("idx", DataType::Int64, true).into(),
+            ],
+            number_rows: 3,
+            return_field: Field::new("f", DataType::Utf8, true).into(),
+        };
+        RegexpExtractFunc::new().invoke_with_args(args)
+    }
+
+    #[test]
+    fn test_regexp_extract_groups() {
+        let cases = [
+            (0, Some("100-200")),
+            (1, Some("100")),
+            (2, Some("200")),
+            (3, None),
+        ];
+        for (idx, expected) in cases {
+            let result =
+                regexp_extract_with_args("100-200", r"(\d+)-(\d+)", idx).unwrap();
+            let actual =
+                if let ColumnarValue::Scalar(ScalarValue::Utf8(ref actual)) = result {
+                    actual
+                } else {
+                    panic!()
+                };
+            assert_eq!(actual, &expected.map(|s| s.to_string()));
+        }
     }
 }
