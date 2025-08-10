@@ -209,8 +209,12 @@ mod tests {
 
     #[test]
     fn test_regexp_extract_mismatch() {
-        let cases: [(&'static str, &'static str, i64, Option<&'static str>); 1] =
-            [("100-200", r"(\d+)-(\d+)", 0, Some("100-200"))];
+        let cases = [
+            ("abc", r"(\d+)", 1, None),
+            ("ac", r"(a)?b(c)?", 2, None),
+            ("abc", r"(a)?b(c)?", 1, Some("a")),
+            ("abc", r"(a)?b(c)?", 2, Some("c")),
+        ];
         for (input, pattern, idx, expected) in cases {
             let result = regexp_extract_with_args(input, pattern, idx);
             let result = unwrap_columnar_value(result.unwrap());
