@@ -127,20 +127,61 @@ mod tests {
             Field::new("pattern", DataType::Utf8, true).into(),
             Field::new("idx", DataType::Int64, true).into(),
         ];
-        let _input = ColumnarValue::Scalar(ScalarValue::Utf8(Some("100-200".into())));
+        let input = ColumnarValue::Scalar(ScalarValue::Utf8(Some("100-200".into())));
         let pattern =
             ColumnarValue::Scalar(ScalarValue::Utf8(Some(r"(\d+)-(\d+)".into())));
         let idx = ColumnarValue::Scalar(ScalarValue::Int64(Some(1)));
         let null = ColumnarValue::Scalar(ScalarValue::Null);
-        let return_field = Field::new("f", DataType::Utf8, true).into();
+        let return_field: std::sync::Arc<Field> =
+            Field::new("f", DataType::Utf8, true).into();
         let args = ScalarFunctionArgs {
-            args: vec![null, pattern, idx],
-            arg_fields,
+            args: vec![null.clone(), pattern.clone(), idx.clone()],
+            arg_fields: arg_fields.clone(),
             number_rows: 3,
-            return_field,
+            return_field: return_field.clone(),
         };
         let result = RegexpExtractFunc::new().invoke_with_args(args);
         let result = unwrap_columnar_value(result.unwrap());
         assert_eq!(result, None);
+
+        let args = ScalarFunctionArgs {
+            args: vec![input.clone(), null.clone(), idx.clone()],
+            arg_fields: arg_fields.clone(),
+            number_rows: 3,
+            return_field: return_field.clone(),
+        };
+        let result = RegexpExtractFunc::new().invoke_with_args(args);
+        let result = unwrap_columnar_value(result.unwrap());
+        assert_eq!(result, None);
+
+        let args = ScalarFunctionArgs {
+            args: vec![input.clone(), pattern.clone(), null.clone()],
+            arg_fields: arg_fields.clone(),
+            number_rows: 3,
+            return_field: return_field.clone(),
+        };
+        let result = RegexpExtractFunc::new().invoke_with_args(args);
+        let result = unwrap_columnar_value(result.unwrap());
+        assert_eq!(result, None);
+
+        let args = ScalarFunctionArgs {
+            args: vec![null.clone(), null.clone(), null.clone()],
+            arg_fields: arg_fields.clone(),
+            number_rows: 3,
+            return_field: return_field.clone(),
+        };
+        let result = RegexpExtractFunc::new().invoke_with_args(args);
+        let result = unwrap_columnar_value(result.unwrap());
+        assert_eq!(result, None);
+
+        let args = ScalarFunctionArgs {
+            args: vec![input.clone(), pattern.clone(), idx.clone()],
+            arg_fields: arg_fields.clone(),
+            number_rows: 3,
+            return_field: return_field.clone(),
+        };
+        let result = RegexpExtractFunc::new().invoke_with_args(args);
+        let result = unwrap_columnar_value(result.unwrap());
+        assert_ne!(result, None);
     }
 }
