@@ -54,6 +54,12 @@ impl ScalarUDFImpl for RegexpExtractFunc {
             _ => return Ok(ColumnarValue::Scalar(ScalarValue::Utf8(None))),
         };
 
+        if idx < 0 {
+            return Err(DataFusionError::Execution(
+                "negative index not allowed".into(),
+            ));
+        }
+
         let re = regex::Regex::new(pattern)
             .map_err(|e| DataFusionError::External(Box::new(e)))?;
 
@@ -191,6 +197,9 @@ mod tests {
             (0, r"(\d+)-(\d+)", true),
             (0, r"(abc", false),
             (0, r"[z-a]", false),
+            (-1, r"(\d+)-(\d+)", false),
+            (-1, r"[z-a]", false),
+            (5, r"[a-z]", true),
         ];
         for (idx, regex, valid) in cases {
             let result = regexp_extract_with_args("100-200", regex, idx);
